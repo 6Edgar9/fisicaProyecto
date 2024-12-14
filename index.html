@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulación Física - Energía Hidráulica</title>
+    <style>
+        /* CSS from previous document, but with enhancements */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #343546;
+            margin: 0;
+            padding: 0;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #ffffff;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .simulation {
+            position: relative;
+            width: 90%;
+            height: 70%;
+            border: 2px solid black;
+            background-color: #f0f0f0;
+            margin: auto;
+            overflow: hidden;
+        }
+        
+        .control-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            z-index: 10;
+        }
+        
+        .control-button:hover {
+            background-color: #0056b3;
+        }
+        
+        .water-tank {
+            position: absolute;
+            bottom: 150px;
+            left: 150px;
+            width: 100px;
+            height: 200px;
+            border: 2px solid #000;
+            background-color: #f0f0f0;
+            cursor: grab;
+        }
+        
+        .water {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 50%;
+            background-color: #00f;
+            transition: height 0.5s;
+        }
+        
+        .hose {
+            position: absolute;
+            bottom: 50px;
+            left: 250px;
+            width: 300px;
+            height: 20px;
+            background-color: black;
+            border-radius: 10px;
+            z-index: 1;
+        }
+        
+        .water-flow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0;
+            background-color: blue;
+            border-radius: 10px;
+            animation: flow 2s linear infinite;
+            opacity: 0;
+        }
+        
+        .water-fall {
+            position: absolute;
+            width: 10px;
+            height: 50px;
+            background-color: blue;
+            border-radius: 5px;
+            animation: fall 0.5s linear infinite;
+            z-index: 2;
+            opacity: 0;
+        }
+        
+        .turbine-container {
+            position: absolute;
+            top: 300px;
+            left: 400px;
+            text-align: center;
+        }
+        
+        .turbine {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            left: 60px;
+            bottom: -250px;
+            border: 2px solid black;
+            border-radius: 50%;
+            cursor: grab;
+        }
+        
+        .blade {
+            position: absolute;
+            width: 10px;
+            height: 70px;
+            background-color: gray;
+            top: -5px;
+            left: 53px;
+            transform-origin: bottom center;
+        }
+
+        .motor {
+            position: absolute;
+            bottom: 120px;
+            left: 550px;
+            width: 100px;
+            height: 100px;
+            background-color: #444;
+            border: 2px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .cable {
+            position: absolute;
+            background-color: red;
+        }
+        
+        .cable-horizontal {
+            height: 4px;
+        }
+        
+        .cable-vertical {
+            width: 4px;
+        }
+        
+        .capacitor {
+            position: absolute;
+            bottom: 110px;
+            left: 700px;
+            width: 60px;
+            height: 100px;
+            background-color: silver;
+            border: 2px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .leds {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: row;
+            gap: 15px;
+        }
+        
+        .led-rect {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            border-radius: 5px;
+            background-color: #555;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        
+        .led-small {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #333;
+            transition: background-color 0.5s;
+        }
+        
+        .led-small.active {
+            background-color: green;
+            box-shadow: 0 0 10px green;
+        }
+        
+        @keyframes flow {
+            0% { width: 0; opacity: 0; }
+            50% { width: 100%; opacity: 1; }
+            100% { width: 100%; opacity: 0; }
+        }
+        
+        @keyframes fall {
+            0% { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+            100% { 
+                transform: translateY(50px);
+                opacity: 0.3;
+            }
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simulación de Energía Hidráulica</h1>
+        <button id="startButton" class="control-button">Inicio</button>
+        <div class="simulation">
+            <div class="water-tank" id="waterTank">
+                <div class="water" id="water"></div>
+            </div>
+      
+            <div class="turbine-container">
+                <div class="turbine" id="turbine">
+                    <div class="blade" style="transform: rotate(0deg)"></div>
+                    <div class="blade" style="transform: rotate(45deg)"></div>
+                    <div class="blade" style="transform: rotate(90deg)"></div>
+                    <div class="blade" style="transform: rotate(135deg)"></div>
+                    <div class="blade" style="transform: rotate(180deg)"></div>
+                    <div class="blade" style="transform: rotate(225deg)"></div>
+                    <div class="blade" style="transform: rotate(270deg)"></div>
+                    <div class="blade" style="transform: rotate(315deg)"></div>
+                </div>
+            </div>
+
+            <div class="motor">Motor</div>
+            <div class="cable cable-horizontal" style="bottom: 170px; left: 520px; width: 30px;"></div>
+            <div class="cable cable-horizontal" style="bottom: 170px; left: 650px; width: 50px;"></div>
+            <div class="cable cable-vertical" style="bottom: 60px; left: 650px; height: 110px;"></div>
+            <div class="capacitor">Capacitor</div>
+
+            <div class="leds">
+                <div class="led-rect">
+                    <div class="led-small" id="led1-1"></div>
+                    <div class="led-small" id="led1-2"></div>
+                    <div class="led-small" id="led1-3"></div>
+                </div>
+                <div class="led-rect">
+                    <div class="led-small" id="led2-1"></div>
+                    <div class="led-small" id="led2-2"></div>
+                    <div class="led-small" id="led2-3"></div>
+                </div>
+                <div class="led-rect">
+                    <div class="led-small" id="led3-1"></div>
+                    <div class="led-small" id="led3-2"></div>
+                    <div class="led-small" id="led3-3"></div>
+                </div>
+                <div class="led-rect">
+                    <div class="led-small" id="led4-1"></div>
+                    <div class="led-small" id="led4-2"></div>
+                    <div class="led-small" id="led4-3"></div>
+                </div>
+            </div>
+
+            <div class="hose">
+                <div class="water-flow" id="waterFlow"></div>
+            </div>
+            <div class="water-fall" id="waterFall"></div>
+        </div>
+    </div>
+
+    <script>
+        const waterTank = document.getElementById("waterTank");
+        const water = document.getElementById("water");
+        const hose = document.querySelector(".hose");
+        const waterFlow = document.getElementById("waterFlow");
+        const waterFall = document.getElementById("waterFall");
+        const turbine = document.getElementById("turbine");
+        const startButton = document.getElementById("startButton");
+        
+        const ledRects = [
+            [document.getElementById("led1-1"), document.getElementById("led1-2"), document.getElementById("led1-3")],
+            [document.getElementById("led2-1"), document.getElementById("led2-2"), document.getElementById("led2-3")],
+            [document.getElementById("led3-1"), document.getElementById("led3-2"), document.getElementById("led3-3")],
+            [document.getElementById("led4-1"), document.getElementById("led4-2"), document.getElementById("led4-3")]
+        ];
+
+        let isFlowing = false;
+        let waterLevel = 50; // Initial water level percentage
+
+        function toggleWaterFlow() {
+            isFlowing = !isFlowing;
+            
+            if (isFlowing) {
+                water.style.height = "10%"; // Reduce water level
+                waterFlow.style.opacity = "1";
+                waterFall.style.opacity = "1";
+                turbine.style.animation = "spin 2s linear infinite";
+                startButton.textContent = "Detener";
+                animateLEDs();
+            } else {
+                water.style.height = "50%"; // Reset water level
+                waterFlow.style.opacity = "0";
+                waterFall.style.opacity = "0";
+                turbine.style.animation = "none";
+                startButton.textContent = "Inicio";
+                resetLEDs();
+            }
+        }
+
+        function animateLEDs() {
+            ledRects.forEach(rect => {
+                rect.forEach((led, index) => {
+                    setTimeout(() => {
+                        led.classList.add("active");
+                    }, index * 250);
+                });
+            });
+        }
+
+        function resetLEDs() {
+            ledRects.forEach(rect => {
+                rect.forEach(led => {
+                    led.classList.remove("active");
+                });
+            });
+        }
+
+        startButton.addEventListener("click", toggleWaterFlow);
+
+        // Drag functionality for water tank
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        waterTank.addEventListener("mousedown", (e) => {
+            isDragging = true;
+            offsetX = e.clientX - waterTank.offsetLeft;
+            offsetY = e.clientY - waterTank.offsetTop;
+            waterTank.style.cursor = "grabbing";
+        });
+
+        document.addEventListener("mousemove", (e) => {
+            if (isDragging) {
+                let newX = e.clientX - offsetX;
+                let newY = e.clientY - offsetY;
+
+                // Limit movement within simulation area
+                const simulation = document.querySelector('.simulation');
+                const simulationRect = simulation.getBoundingClientRect();
+
+                newX = Math.max(simulationRect.left, Math.min(newX, simulationRect.right - waterTank.offsetWidth));
+                newY = Math.max(simulationRect.top, Math.min(newY, simulationRect.bottom - waterTank.offsetHeight));
+
+                waterTank.style.left = `${newX - simulationRect.left}px`;
+                waterTank.style.top = `${newY - simulationRect.top}px`;
+            }
+        });
+
+        document.addEventListener("mouseup", () => {
+            isDragging = false;
+            waterTank.style.cursor = "grab";
+        });
+    </script>
+</body>
+</html>
