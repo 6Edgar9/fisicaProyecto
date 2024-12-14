@@ -207,6 +207,20 @@
             background-color: #333;
             transition: background-color 0.5s;
         }
+
+        .physics-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255,255,255,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            width: 250px;
+            font-family: monospace;
+        }
+        .physics-value {
+            margin-bottom: 5px;
+        }
         
         .led-small.active {
             background-color: green;
@@ -287,6 +301,16 @@
                 </div>
             </div>
 
+            <div class="physics-panel" id="physicsPanel">
+                <div class="physics-value">Altura del agua: <span id="waterHeight">200</span> cm</div>
+                <div class="physics-value">Velocidad de caída: <span id="fallSpeed">0</span> m/s</div>
+                <div class="physics-value">Energía potencial: <span id="potentialEnergy">0</span> J</div>
+                <div class="physics-value">Energía cinética: <span id="kineticEnergy">0</span> J</div>
+                <div class="physics-value">Velocidad turbina: <span id="turbineSpeed">0</span> RPM</div>
+                <div class="physics-value">Voltaje generado: <span id="generatedVoltage">0</span> V</div>
+                <div class="physics-value">Eficiencia: <span id="systemEfficiency">0</span>%</div>
+            </div>
+
             <div class="hose">
                 <div class="water-flow" id="waterFlow"></div>
             </div>
@@ -295,14 +319,22 @@
     </div>
 
     <script>
-        const waterTank = document.getElementById("waterTank");
-        const water = document.getElementById("water");
-        const hose = document.querySelector(".hose");
-        const waterFlow = document.getElementById("waterFlow");
-        const waterFall = document.getElementById("waterFall");
-        const turbine = document.getElementById("turbine");
-        const startButton = document.getElementById("startButton");
+        const physicsPanel = document.getElementById("physicsPanel");
+        const waterHeightSpan = document.getElementById("waterHeight");
+        const fallSpeedSpan = document.getElementById("fallSpeed");
+        const potentialEnergySpan = document.getElementById("potentialEnergy");
+        const kineticEnergySpan = document.getElementById("kineticEnergy");
+        const turbineSpeedSpan = document.getElementById("turbineSpeed");
+        const generatedVoltageSpan = document.getElementById("generatedVoltage");
+        const systemEfficiencySpan = document.getElementById("systemEfficiency");
         
+        // Physics constants
+        const GRAVITY = 9.8; // m/s²
+        const WATER_DENSITY = 1000; // kg/m³
+        const TANK_VOLUME = 0.049; // m³ (200cm de alto)
+        const TANK_MASS = WATER_DENSITY * TANK_VOLUME;
+
+
         const ledRects = [
             [document.getElementById("led1-1"), document.getElementById("led1-2"), document.getElementById("led1-3")],
             [document.getElementById("led2-1"), document.getElementById("led2-2"), document.getElementById("led2-3")],
@@ -310,9 +342,51 @@
             [document.getElementById("led4-1"), document.getElementById("led4-2"), document.getElementById("led4-3")]
         ];
 
+        function calculatePhysics(waterLevel) {
+            // Altura en metros (convertir porcentaje a metros)
+            const height = waterLevel / 100 * 2; // Asumiendo tanque de 2m de alto
+
+            // Velocidad de caída
+            const fallSpeed = Math.sqrt(2 * GRAVITY * height);
+
+            // Energía potencial gravitacional
+            const potentialEnergy = TANK_MASS * GRAVITY * height;
+
+            // Energía cinética
+            const kineticEnergy = 0.5 * TANK_MASS * Math.pow(fallSpeed, 2);
+
+            // Velocidad de turbina (simulada)
+            const turbineSpeed = fallSpeed * 60; // Convertir a RPM
+
+            // Voltaje generado (simulado)
+            const generatedVoltage = fallSpeed * 0.5;
+
+            // Eficiencia del sistema (simulada)
+            const systemEfficiency = Math.min(80, fallSpeed * 10);
+
+            // Actualizar panel de física
+            waterHeightSpan.textContent = (waterLevel / 100 * 200).toFixed(2);
+            fallSpeedSpan.textContent = fallSpeed.toFixed(2);
+            potentialEnergySpan.textContent = potentialEnergy.toFixed(2);
+            kineticEnergySpan.textContent = kineticEnergy.toFixed(2);
+            turbineSpeedSpan.textContent = turbineSpeed.toFixed(0);
+            generatedVoltageSpan.textContent = generatedVoltage.toFixed(2);
+            systemEfficiencySpan.textContent = systemEfficiency.toFixed(1);
+
+            return {
+                fallSpeed,
+                potentialEnergy,
+                kineticEnergy,
+                turbineSpeed,
+                generatedVoltage,
+                systemEfficiency
+            };
+        }
+
         let isFlowing = false;
         let waterLevel = 50; // Initial water level percentage
 
+        // Modificar función toggleWaterFlow para incluir cálculos físicos
         function toggleWaterFlow() {
             isFlowing = !isFlowing;
             
@@ -322,13 +396,30 @@
                 waterFall.style.opacity = "1";
                 turbine.style.animation = "spin 2s linear infinite";
                 startButton.textContent = "Detener";
+                
+                // Calcular física con nivel de agua actual
+                const physicsData = calculatePhysics(10);
+                
+                // Ajustar animación basada en física
+                turbine.style.animationDuration = `${2 / (physicsData.turbineSpeed / 60)}s`;
+                
                 animateLEDs();
             } else {
-                water.style.height = "50%"; // Reset water level
+                water.style.height = "100%"; // Reset water level
                 waterFlow.style.opacity = "0";
                 waterFall.style.opacity = "0";
                 turbine.style.animation = "none";
                 startButton.textContent = "Inicio";
+                
+                // Resetear valores de física
+                waterHeightSpan.textContent = "200";
+                fallSpeedSpan.textContent = "0";
+                potentialEnergySpan.textContent = "0";
+                kineticEnergySpan.textContent = "0";
+                turbineSpeedSpan.textContent = "0";
+                generatedVoltageSpan.textContent = "0";
+                systemEfficiencySpan.textContent = "0";
+                
                 resetLEDs();
             }
         }
